@@ -23,7 +23,7 @@ jobs:
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
           echo "DIR is $DIR"
           ls -la $DIR
-          cp -rv $DIR/*.
+          cp -rv $DIR/*. .
           ls -la
 
       - name: Create clean spec
