@@ -12,19 +12,35 @@ jobs:
       - name: Install deps
         run: |
           sudo apt update -qq
-          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config cmake libffi-dev libssl-dev -qq
+          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config cmake libffi-dev libssl-dev libltdl-dev -qq
           pip install -q buildozer Cython==0.29.36
       - name: Extract
         run: |
           unzip -o dongmurih-1.zip -d app
           SPEC=$(find app -name buildozer.spec | head -1)
-          echo "Found: $SPEC"
           DIR=$(dirname "$SPEC")
-          echo "Copying from $DIR"
-          cp -r $DIR/. .
+          cp -r $DIR/..
           ls -la
-          cat buildozer.spec | head -20
- 
+      - name: Fix spec duplicates
+        run: |
+          echo "Fixing duplicate android.archs"
+          # Remove duplicate lines keeping last one
+          python3 << 'PY'
+          seen={}
+          lines=open('buildozer.spec').read().splitlines()
+          out=[]
+          # simple fix: remove second occurrence of android.archs
+          count=0
+          for line in lines:
+              if 'android.archs' in line and '=' in line:
+                  count+=1
+                  if count==2:
+                      continue # skip second duplicate
+              out.append(line)
+          open('buildozer.spec','w').write('\n'.join(out))
+          print("Fixed!")
+          PY
+          grep -n "android.archs" buildozer.spec
       - name: Build
         run: buildozer android debug
       - name: Upload APK
