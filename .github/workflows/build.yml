@@ -18,6 +18,9 @@ jobs:
           python3.10 -m pip install --upgrade pip
           python3.10 -m pip install buildozer Cython==0.29.33
 
+      
+
+          
       - name: Extract
         run: |
           rm -rf app
@@ -26,6 +29,7 @@ jobs:
           echo "DIR is $DIR"
           cp -a $DIR/. .
           ls -la
+          cat buildozer.spec || echo "no spec in zip"
 
       - name: Create clean spec
         run: |
@@ -37,19 +41,18 @@ jobs:
           source.dir =.
           source.include_exts = py,png,jpg,kv,atlas,json,ttf,db
           version = 1.0
-          requirements = python3,kivy==2.3.0,kivymd==1.1.1,pillow
+          requirements = python3,kivy==2.3.0,pillow
           orientation = portrait
           android.permissions = INTERNET
           android.api = 33
           android.minapi = 21
-          android.ndk = 25b
-          android.archs = arm64-v8a
+          android.ndk = 28c
           android.accept_sdk_license_agreement = True
           p4a.branch = master
           [buildozer]
-          log_level = 1
+          log_level = 2
           EOF
-          
+      
       - name: Fix SDK License
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
