@@ -9,13 +9,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-
+        
       - name: Install deps
         run: |
           sudo apt update -qq
-          sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config cmake libffi-dev libssl-dev -qq
-          pip install -q buildozer Cython==0.29.36
-
+          sudo apt install -y openjdk-17-jdk zip unzip
+          python3.10 -m pip install --upgrade pip
+          python3.10 -m pip install buildozer Cython==0.29.33
+   
       - name: Extract
         run: |
           rm -rf app
@@ -24,6 +25,7 @@ jobs:
           echo "DIR is $DIR"
           cp -a $DIR/. .
           ls -la
+          
       - name: Create clean spec
         run: |
           cat > buildozer.spec << 'EOF'
