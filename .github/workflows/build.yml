@@ -22,7 +22,7 @@ jobs:
           unzip -o dongmurih-1.zip -d app
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
           echo "DIR is $DIR"
-          cp -a $DIR/..
+          cp -a $DIR/. .
           ls -la
 
       - name: Create clean spec
