@@ -20,8 +20,11 @@ jobs:
           SPEC=$(find app -name buildozer.spec | head -1)
           echo "Found: $SPEC"
           DIR=$(dirname "$SPEC")
-          cp -r $DIR/*.
+          echo "Copying from $DIR"
+          cp -r $DIR/. .
           ls -la
+          cat buildozer.spec | head -20
+ 
       - name: Build
         run: buildozer android debug
       - name: Upload APK
