@@ -15,15 +15,13 @@ jobs:
           sudo apt update -qq
           sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config cmake libffi-dev libssl-dev -qq
           pip install -q buildozer Cython==0.29.36
-
       - name: Extract
         run: |
           rm -rf app
           unzip -o dongmurih-1.zip -d app
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
           echo "DIR is $DIR"
-          ls -la $DIR
-          cp -rv $DIR/*. .
+          cp -a $DIR/. .
           ls -la
 
       - name: Create clean spec
