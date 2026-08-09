@@ -1,43 +1,31 @@
 name: Build APK
-concurrency:
-  group: build-apk
-  cancel-in-progress: true
 on: [push]
-
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: Setup Java 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-
-      - name: Install dependencies
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.10' }
+      - uses: actions/setup-java@v4
+        with: { distribution: 'temurin', java-version: '17' }
+      - name: Install deps
         run: |
           sudo apt update
-          sudo apt install -y zip unzip python3-pip libffi-dev libssl-dev
-          pip install --upgrade pip
+          sudo apt install -y zip unzip libffi-dev libssl-dev
           pip install buildozer Cython==0.29.36
 
-      - name: Extract app
+      - name: Extract
         run: |
           rm -rf app
           unzip -o dongmurih-1.zip -d app
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
-          echo "Found $DIR"
-          cp -a $DIR/. .
+          echo "DIR=$DIR"
+          cp -a "$DIR"/. .
           ls -la
+          ls -la *.py
 
-      - name: Create working spec
+      - name: Create spec
         run: |
           cat > buildozer.spec << 'EOF'
           [app]
@@ -49,34 +37,22 @@ jobs:
           version = 1.0
           requirements = python3,kivy==2.2.0
           orientation = portrait
-          android.permissions = INTERNET
           android.api = 33
           android.minapi = 21
           android.ndk = 28c
           android.accept_sdk_license_agreement = True
-          android.ant_path = /usr/bin/ant
-          p4a.branch = master
           [buildozer]
           log_level = 2
           EOF
 
-      - name: Build APK
+      - name: Build
         run: |
+          set -o pipefail
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
           buildozer android debug 2>&1 | tee build.log
-          echo "=== LAST 50 LINES ==="
-          tail -n 50 build.log
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: apk
           path: bin/*.apk
-
-      - name: Upload log if failed
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: build.log
