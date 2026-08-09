@@ -48,7 +48,10 @@ jobs:
       - name: Build
         run: |
           set -o pipefail
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          echo "JAVA_HOME is $JAVA_HOME"
+          which javac
+          export PATH=$JAVA_HOME/bin:$PATH
+          which javac
           buildozer android debug 2>&1 | tee build.log
 
       - name: Upload APK
