@@ -13,6 +13,8 @@ jobs:
         run: |
           sudo apt update -qq
           sudo apt install -y openjdk-17-jdk zip unzip wget
+          sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
+          java -version
           python3.10 -m pip install --upgrade pip
           python3.10 -m pip install buildozer Cython==0.29.33
 
@@ -21,6 +23,7 @@ jobs:
           rm -rf app
           unzip -o dongmurih-1.zip -d app
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
+          echo "DIR is $DIR"
           cp -a $DIR/. .
           ls -la
 
@@ -47,28 +50,31 @@ jobs:
           log_level = 1
           EOF
 
-      - name: Fix Android SDK License - MANUAL
+      - name: Fix SDK License
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
           rm -rf ~/.buildozer
           mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
           cd /tmp
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmd.zip
           unzip -q cmd.zip
           mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
-          mv cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/ || mv cmdline-tools/. ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/ || true
+          mv cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
           mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
           echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
           echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
           echo "24333f8a63b6825ea9c5514f83c1051866b07ae7" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "y" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
           export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
           export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          yes | sdkmanager --licenses || true
-          yes | sdkmanager "build-tools;33.0.2" "build-tools;37.0.0" "platforms;android-33" "platform-tools" || true
+          yes | sdkmanager --licenses
+          yes | sdkmanager "build-tools;33.0.2" "build-tools;37.0.0" "platforms;android-33" "platform-tools"
           ls $ANDROID_SDK_ROOT/build-tools/
 
       - name: Build
         run: |
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH=$JAVA_HOME/bin:$PATH
           python3.10 -m buildozer android debug
 
       - name: Upload APK
