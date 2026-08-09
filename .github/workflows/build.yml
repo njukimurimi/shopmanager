@@ -15,18 +15,17 @@ jobs:
           sudo apt update -qq
           sudo apt install -y openjdk-17-jdk zip unzip autoconf libtool pkg-config cmake libffi-dev libssl-dev -qq
           pip install -q buildozer Cython==0.29.36
+
       - name: Extract
         run: |
           rm -rf app
           unzip -o dongmurih-1.zip -d app
-          DIR=$(find app -name "main.py" | head -1 | xargs dirname)
-          echo "DIR is $DIR"
-          cp -a $DIR/. .
+          cp -r app/dongmurih/..
           ls -la
+          rm -f buildozer.spec
 
       - name: Create clean spec
         run: |
-          rm -f buildozer.spec
           cat > buildozer.spec << 'EOF'
           [app]
           title = Shop Manager
@@ -41,10 +40,23 @@ jobs:
           android.api = 33
           android.minapi = 21
           android.ndk = 25b
+          android.sdk = 33
+          android.build_tools_version = 33.0.2
           android.archs = arm64-v8a, armeabi-v7a
+          android.accept_sdk_license_agreement = True
+          android.ant = auto
+          p4a.branch = master
           [buildozer]
           log_level = 2
           EOF
+
+      - name: Accept Android Licenses
+        run: |
+          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
+          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "24333f8a63b6825ea9c5514f83c1051866b07ae7" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+          echo "y" | buildozer android update || true
 
       - name: Build
         run: buildozer android debug
