@@ -1,37 +1,43 @@
 name: Build APK
+concurrency:
+  group: build-apk
+  cancel-in-progress: true
 on: [push]
+
 jobs:
   build:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install deps
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Install dependencies
         run: |
-          sudo apt update -qq
-          sudo apt install -y openjdk-17-jdk zip unzip wget
-          sudo update-alternatives --set java /usr/lib/jvm/java-17-openjdk-amd64/bin/java
-          java -version
-          python3.10 -m pip install --upgrade pip
-          python3.10 -m pip install buildozer Cython==0.29.33
+          sudo apt update
+          sudo apt install -y zip unzip python3-pip libffi-dev libssl-dev
+          pip install --upgrade pip
+          pip install buildozer Cython==0.29.36
 
-      
-
-          
-      - name: Extract
+      - name: Extract app
         run: |
           rm -rf app
           unzip -o dongmurih-1.zip -d app
           DIR=$(find app -name "main.py" | head -1 | xargs dirname)
-          echo "DIR is $DIR"
-          cp -a $DIR/. .
+          echo "Found $DIR"
+          cp -a $DIR/..
           ls -la
-          cat buildozer.spec || echo "no spec in zip"
 
-      - name: Create clean spec
+      - name: Create working spec
         run: |
           cat > buildozer.spec << 'EOF'
           [app]
@@ -39,60 +45,38 @@ jobs:
           package.name = shopmanager
           package.domain = com.njukimurimi.shopmanager
           source.dir =.
-          source.include_exts = py,png,jpg,kv,atlas,json,ttf,db
+          source.include_exts = py,png,jpg,kv,atlas,json
           version = 1.0
-          requirements = python3,kivy==2.3.0,pillow
+          requirements = python3,kivy==2.2.0
           orientation = portrait
           android.permissions = INTERNET
           android.api = 33
           android.minapi = 21
           android.ndk = 28c
           android.accept_sdk_license_agreement = True
+          android.ant_path = /usr/bin/ant
           p4a.branch = master
           [buildozer]
           log_level = 2
           EOF
-      
-      - name: Fix SDK License
+
+      - name: Build APK
         run: |
           export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
           export PATH=$JAVA_HOME/bin:$PATH
-          rm -rf ~/.buildozer
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools
-          cd /tmp
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O cmd.zip
-          unzip -q cmd.zip
-          mkdir -p ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest
-          mv cmdline-tools/* ~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/
-          mkdir -p ~/.buildozer/android/platform/android-sdk/licenses
-          echo "8933bad161af4178b1185d1a37fbf41ea5269c55" > ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "d56f5187479451eabf01fb78af6dfcb131a6481e" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          echo "24333f8a63b6825ea9c5514f83c1051866b07ae7" >> ~/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
-          export ANDROID_SDK_ROOT=$HOME/.buildozer/android/platform/android-sdk
-          export PATH=$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$PATH
-          yes | sdkmanager --licenses
-          yes | sdkmanager "build-tools;33.0.2" "build-tools;37.0.0" "platforms;android-33" "platform-tools"
-          mkdir -p $ANDROID_SDK_ROOT/tools/bin
-          cp $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager $ANDROID_SDK_ROOT/tools/bin/ || true
-          cp -r $ANDROID_SDK_ROOT/cmdline-tools/latest/lib $ANDROID_SDK_ROOT/tools/ || true
-          ls $ANDROID_SDK_ROOT/build-tools/
-      
-      - name: Build
-        run: |
-          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-          export PATH=$JAVA_HOME/bin:$PATH
-          python3.10 -m buildozer android debug 2>&1 | tee build.txt || true
-          echo "========== LAST 100 LINES =========="
-          tail -n 100 build.txt
-          echo "========== ERRORS ONLY =========="
-          grep -i -A5 "error\|failed\|exception\|fatal" build.txt | tail -n 200
-          if [ ! -f bin/*.apk ]; then
-            echo "BUILD FAILED - see errors above"
-            exit 1
-          fi
-      
+          buildozer android debug 2>&1 | tee build.log
+          echo "=== LAST 50 LINES ==="
+          tail -n 50 build.log
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: shopmanager-apk
+          name: apk
           path: bin/*.apk
+
+      - name: Upload log if failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: build.log
